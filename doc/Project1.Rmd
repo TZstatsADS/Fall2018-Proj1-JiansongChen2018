@@ -146,12 +146,16 @@ There are a few words appearing frequently in happy moments: ¡°friend¡±, ¡°time¡
 
 >## Between Gender and Marriage
 Among different genders, the word of happiness will be slightly different.
-
+### WordCloud for Male
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-# Wordcloud for male and female
-par(mfrow = c(1,2))
-wordcloud2(head(word_count_male,100), size = 0.8, rotateRatio = 0, gridSize = 1)
-wordcloud2(head(word_count_female,100), size = 0.8, rotateRatio = 0, gridSize = 1)
+# Wordcloud for male 
+wordcloud2(head(word_count_male,100), size = 0.8, rotateRatio = 0, gridSize = 1,shape = "triangle-forward")
+```
+\newline 
+### WordCloud for female
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Wordcloud forfemale
+wordcloud2(head(word_count_female,100), size = 0.8, rotateRatio = 0, gridSize = 1, shape = "triangle")
 ```
 
 \newline
@@ -267,7 +271,7 @@ rownames(catf) <- c("single male", "married male", "single female", "married fem
 library(d3heatmap)
 library(shiny)
 div(d3heatmap(catf, scale="none", colors= "Reds",
-          xaxis_font_size = 8,Rowv = FALSE,Colv=FALSE,show_grid=TRUE),
+          xaxis_font_size = 8,Rowv = FALSE,Colv=FALSE,show_grid=TRUE, width = 800, height = 500),
     align='center')
 ```
 \newline
@@ -337,7 +341,7 @@ rownames(catf) <- c("<20", "20-30", "30-40", "40-50","50-60","60-70","70-80","80
 library(d3heatmap)
 library(shiny)
 div(d3heatmap(catf, scale="none", colors= "Greens",
-          xaxis_font_size = 8,Rowv = FALSE,Colv=FALSE,show_grid=TRUE),
+          xaxis_font_size = 8,Rowv = FALSE,Colv=FALSE,show_grid=TRUE, width = 800, height = 500),
     align='center')
 ```
 \newline
@@ -371,7 +375,7 @@ rownames(senti) <- c("single male", "married male", "single female", "married fe
 library(d3heatmap)
 library(shiny)
 div(d3heatmap(senti, scale="none", colors= "Blues",
-          xaxis_font_size = 8,Rowv = FALSE,Colv=FALSE,show_grid=TRUE),
+          xaxis_font_size = 8,Rowv = FALSE,Colv=FALSE,show_grid=TRUE, width = 800, height = 500),
     align='center')
 ```
 \newline
