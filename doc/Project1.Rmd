@@ -1,0 +1,328 @@
+---
+- title:''
+---
+
+```{r setup, include=FALSE}
+setwd("/Users/cjsly/Documents/GitHub/Fall2018-Proj1-JiansongChen2018/output")
+```
+
+>#**What made you happy today?**
+>#**What people want to pursue for happiness? Male vs Female: who is happier?**
+<center>By Jason(Jiansong) Chen</center> 
+
+\newline
+\newline
+\newline
+
+<font size=4>
+Recently, a survey had been conducted among employees of Amazon Mechanical Turk (MTurk). It had been listed with the title, "What made you happy today" to question MTurk's worker what their happy moments were in the past 24 hours or past 3 months. Let's go and check out their happiness!
+
+![](c:/Users/cjsly/Documents/GitHub/Fall2018-Proj1-JiansongChen2018/output/Happiness.png)
+
+\newline
+\newline
+\newline
+
+>## Word that Matters:
+
+Blaise Pascal said, ¡°All men seek happiness. This is without exception. Whatever different means they employ, they all tend to this end. The cause of some going to war, and of others avoiding it, is the same desire in both, attended with different views. The will never takes the least step but to this object. This is the motive of every action of every man, even of those who hang themselves.¡± We are now to explore what the happiness people would pursue inbetween different genders. Definitely, marital status would also affect the choice of people to find happiness. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(tidytext)
+library(DT)
+library(scales)
+library(wordcloud2)
+library(gridExtra)
+library(ngram)
+
+hm_data <- read_csv("c:/Users/cjsly/Documents/GitHub/Fall2018-Proj1-JiansongChen2018/output/processed_moments.csv")
+urlfile<-'https://raw.githubusercontent.com/rit-public/HappyDB/master/happydb/data/demographic.csv'
+demo_data <- read_csv(urlfile)
+
+hm_data <- hm_data %>%
+  inner_join(demo_data, by = "wid") %>%
+  select(wid,
+         original_hm,
+         gender, 
+         marital, 
+         parenthood,
+         reflection_period,
+         age, 
+         country, 
+         ground_truth_category, 
+         predicted_category,
+         text) %>%
+  mutate(count = sapply(hm_data$text, wordcount)) %>%
+  filter(gender %in% c("m", "f")) %>%
+  filter(marital %in% c("single", "married")) %>%
+  filter(parenthood %in% c("n", "y")) %>%
+  filter(reflection_period %in% c("24h", "3m")) %>%
+  mutate(reflection_period = fct_recode(reflection_period, 
+                                        months_3 = "3m", hours_24 = "24h"))
+```
+\newline
+
+First of all, we will have a glance over the total survey populations. From pei chart below, we observed that the proportion of people in different gender and different marital status. It is obvious that single male stands much larger proportion in this survey while the other groups have similar proportions. 
+
+\newline
+```{r echo=FALSE, message=FALSE, warning=FALSE} 
+count_sm <- count(hm_data, hm_data$gender == "m" & hm_data$marital=="single")[2,2]
+count_mm <- count(hm_data, hm_data$gender == "m" & hm_data$marital=="married")[2,2]
+count_sf <- count(hm_data, hm_data$gender == "f" & hm_data$marital=="single")[2,2]
+count_mf <- count(hm_data, hm_data$gender == "f" & hm_data$marital=="married")[2,2]
+count <- do.call(c, list(count_sm, count_sf, count_mm, count_mf)) 
+count <- do.call(cbind, count)
+names <- c("single male", "married male", "single female", "married female")
+colnames(count) <- names
+pct <- round(count/sum(count)*100)
+names <- paste(names, pct) # add percents to labels 
+names <- paste(names,"%",sep="") # ad % to labels 
+pie(count,labels = names, col=rainbow(length(names)),
+  	main="Pie Chart of Gender with Marital Status")
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+bag_of_words <-  hm_data %>%
+  unnest_tokens(word, text)
+# Total word count
+word_count <- bag_of_words %>%
+  count(word, sort = TRUE)
+# Word Count for male and female
+word_count_male <- bag_of_words %>%
+  filter(bag_of_words$gender == "m") %>%
+  count(word, sort = TRUE)
+word_count_female <- bag_of_words %>%
+  filter(bag_of_words$gender == "f") %>%
+  count(word, sort = TRUE)  
+# Word Count for single and married
+word_count_single <- bag_of_words %>%
+  filter(bag_of_words$marital == "single") %>%
+  count(word, sort = TRUE)
+word_count_married <- bag_of_words %>%
+  filter(bag_of_words$marital == "married") %>%
+  count(word, sort = TRUE)
+# Word Count for single male
+word_count_male_single <- bag_of_words %>%
+  filter(bag_of_words$gender == "m"& bag_of_words$marital == "single") %>%
+  count(word, sort = TRUE)
+# Word Count for married male
+word_count_male_married <- bag_of_words %>%
+  filter(bag_of_words$gender == "m"& bag_of_words$marital == "married") %>%
+  count(word, sort = TRUE)
+# Word Count for single female
+word_count_female_single <- bag_of_words %>%
+  filter(bag_of_words$gender == "f"& bag_of_words$marital == "single") %>%
+  count(word, sort = TRUE)
+# Word Count for married female
+word_count_female_married <- bag_of_words %>%
+  filter(bag_of_words$gender == "f"& bag_of_words$marital == "married") %>%
+  count(word, sort = TRUE)
+# Word Count for long reflection time 
+word_countlreflection <- bag_of_words %>%
+  filter(bag_of_words$reflection_period == "hours_24") %>%
+  count(word, sort = TRUE)
+# Word Count for short reflection time 
+word_count_male_sreflection <- bag_of_words %>%
+  filter(bag_of_words$reflection_period == "months_3") %>%
+  count(word, sort = TRUE)
+```
+
+\newline
+
+In this part, we will analyze the survey to find out what really make people happy. 
+Let's take a look at the overview of the most popular words in all happy moments:
+
+\newline
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Wordcloud for male and female
+wordcloud2(head(word_count,100), size = 0.8, rotateRatio = 0, gridSize = 1)
+```
+\newline
+
+There are a few words appearing frequently in happy moments: ¡°friend¡±, ¡°time¡±, ¡°family¡±, ¡°home¡±, ¡°played¡±, ¡°birthday¡±, and so on. These words show the pursuit of happiness of people and reflect the motivation of choosing happiness.
+
+>## Between Gender and Marriage
+Among different genders, the word of happiness will be slightly different.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Wordcloud for male and female
+par(mfrow = c(1,2))
+wordcloud2(head(word_count_male,100), size = 0.8, rotateRatio = 0, gridSize = 1)
+wordcloud2(head(word_count_female,100), size = 0.8, rotateRatio = 0, gridSize = 1)
+```
+
+\newline
+
+From the WordCloud, we can easily see that *friend*, *wife*, *family*, *game*, and *home* are top five meaningful nouns that represent the happiness that male take. Meanwhile, *friend*, *husband*, *family*, *son*, and *daughter* are top five meaningful nouns that represent the happiness that female take. WordCloud has told us the fact that family is always the key idea for people to pursue happiness no matter what gender is. 
+
+\newline
+From the more detailed word frequency table, we would find out that beside of family, entertainment and relationship would be another two factors. Playing game or watching tvs is always a way to achieve happiness. Also, love between lovers or couples also creates happiness. 
+
+\newline
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+par(mfrow=c(1,2))
+word_count_male %>%
+    mutate(word = reorder(word, n)) %>%
+    head(20) %>%
+    ggplot(aes(word, n)) +
+    geom_col() +
+    xlab(NULL) +
+    ylab("Word Frequency for male")+
+    coord_flip()
+
+word_count_female %>%
+    mutate(word = reorder(word, n)) %>%
+    head(20) %>%
+    ggplot(aes(word, n)) +
+    geom_col() +
+    xlab(NULL) +
+    ylab("Word Frequency for female")+
+    coord_flip()
+```
+
+\newline
+Furthermore, as we go deeper to explore the key word that people matters for happiness, the marital status will be another main factor which differ the result. In general, people with marriage would have higher chance of getting happiness from family, children and belove. People without marriage would be more likely to achieve happiness from friends or entertainment. The charts below will show the detailed results.   
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+par(mfrow=c(2,2))
+word_count_male_single %>%
+    mutate(word = reorder(word, n)) %>%
+    head(20) %>%
+    ggplot(aes(word, n)) +
+    geom_col() +
+    xlab(NULL) +
+    ylab("Word Frequency for single male")+
+    coord_flip()
+word_count_female_single %>%
+    mutate(word = reorder(word, n)) %>%
+    head(20) %>%
+    ggplot(aes(word, n)) +
+    geom_col() +
+    xlab(NULL) +
+    ylab("Word Frequency for single female")+
+    coord_flip()
+word_count_male_married %>%
+    mutate(word = reorder(word, n)) %>%
+    head(20) %>%
+    ggplot(aes(word, n)) +
+    geom_col() +
+    xlab(NULL) +
+    ylab("Word Frequency for married male")+
+    coord_flip()
+word_count_female_married %>%
+    mutate(word = reorder(word, n)) %>%
+    head(20) %>%
+    ggplot(aes(word, n)) +
+    geom_col() +
+    xlab(NULL) +
+    ylab("Word Frequency for married female")+
+    coord_flip()
+```
+\newline
+
+The results have proved my prediction. For married people, they are concerned about their *family* and children. For unmarried people, *friend*, *girlfriend* and *boyfriend* are their concern instead of *son* or *daughter*. 
+
+we can also research the happiness through topic allocation. According to the classifiers provided by survey holder, all happy moments can be categorized into seven groups: "achievement","affection","bonding","enjoy_the_moment","exercise","leisure", and "nature". 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+category <- NA
+cat <- c("achievement","affection","bonding","enjoy_the_moment","exercise","leisure","nature")
+
+for (i in 1:7){
+  category[i] <- count(filter(hm_data, hm_data$predicted_category == cat[i] & hm_data$gender == "m" & hm_data$marital == "single" ))
+}
+cat1 <- do.call(cbind, category)
+cat1 <- round(cat1/sum(cat1)*100)
+
+for (i in 1:7){
+  category[i] <- count(filter(hm_data, hm_data$predicted_category == cat[i] & hm_data$gender == "m" & hm_data$marital == "married" ))
+}
+cat2 <- do.call(cbind, category)
+cat2 <- round(cat2/sum(cat2)*100)
+
+for (i in 1:7){
+  category[i] <-  count(filter(hm_data, hm_data$predicted_category == cat[i] & hm_data$gender == "f" & hm_data$marital == "single" ))
+}
+cat3 <- do.call(cbind, category)
+cat3 <- round(cat3/sum(cat3)*100)
+
+for (i in 1:7){
+  category[i] <- count(filter(hm_data, hm_data$predicted_category == cat[i] & hm_data$gender == "f" & hm_data$marital == "married" ))
+}
+cat4 <- do.call(cbind, category)
+cat4 <- round(cat4/sum(cat4)*100)
+catf <- rbind(cat1,cat2,cat3,cat4)
+colnames(catf) <- cat
+rownames(catf) <- c("single male", "married male", "single female", "married female")
+
+library(d3heatmap)
+library(shiny)
+div(d3heatmap(catf, scale="none", colors= "Reds",
+          xaxis_font_size = 8,Rowv = FALSE,Colv=FALSE,show_grid=TRUE),
+    align='center')
+```
+\newline
+Note that the darker red-color indicator represents higher weights on that category. From the heatmap, we can see that single male and single female are more likely to receive happiness from achievement. Without children or even marriage, unmarried people would have more time and energy focusing on the job or work, which make them easier to achieve their target. But for married people, they are more relied on affection, which represent relationship between family and children.  
+\newline
+ 
+Last but not least, we need to check which gender group is happier. By using the sentiments analysis, we can analyze each happy moments from the aspects of the eight basic emotions (anger, fear, anticipation, trust, surprise, sadness, joy, and disgust) and two sentiments (negative and positive). But since it is happy moments, I would expect happy moments heavily relied on positive sentiments.
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(sentimentr)
+library(syuzhet)
+library(tibble)
+senti <- matrix(NA, ncol = 10, nrow = 4)
+emotions<-get_nrc_sentiment(filter(hm_data, hm_data$gender == "f" & hm_data$marital == "single" )$text)
+emotions2<-get_nrc_sentiment(filter(hm_data, hm_data$gender == "m" & hm_data$marital == "married" )$text)
+emotions3<-get_nrc_sentiment(filter(hm_data, hm_data$gender == "f" & hm_data$marital == "single" )$text)
+emotions4<-get_nrc_sentiment(filter(hm_data, hm_data$gender == "f" & hm_data$marital == "married" )$text)
+
+for (i in 1:10){
+  senti[1,i] <- sum(emotions[,i])
+  senti[2,i] <- sum(emotions2[,i])
+  senti[3,i] <- sum(emotions3[,i])
+  senti[4,i] <- sum(emotions4[,i])
+}
+for (i in 1:4){
+  senti[i,] <- round(senti[i,]/sum(senti[i,])*100)
+}
+
+emo <-c("anger", "anticipation","disgust","fear","joy","sadness","surprise", "trust","negative", "positive")
+colnames(senti) <- emo
+rownames(senti) <- c("single male", "married male", "single female", "married female")
+library(d3heatmap)
+library(shiny)
+div(d3heatmap(senti, scale="none", colors= "Blues",
+          xaxis_font_size = 8,Rowv = FALSE,Colv=FALSE,show_grid=TRUE),
+    align='center')
+```
+\newline
+
+From the heatmap, we can clearly see that the dark shade from all groups are very similar, which represents no matter what gender or marriage is, people receive almost same amount of happiness in propotion. 
+
+
+
+>## Summary
+
+![](c:/Users/cjsly/Documents/GitHub/Fall2018-Proj1-JiansongChen2018/output/happiness2.jpeg)
+
+By analyzing the happy moment among different genders and different marital status, we could get the following results.
+
+
++ Male can more easily pursue happiness from achievement while female more prefer to receive happiness from family and love. 
+
++ For male or female, single or married, people recieve similar level of happiness.  
+
+<font size=1.5>
+**Reference:**   
+
+1. HappyDB: From https://gist.github.com/jokerkeny/18c396a00f1e0ab367b9721552013ec7 
+
+2. Quotes of Blaise Pascal: From https://www.goodreads.com/quotes/65485-all-men-seek-happiness-this-is-without-exception-whatever-different
+
+
+
+
+
+
+
