@@ -30,16 +30,16 @@ Blaise Pascal said, ¡°All men seek happiness. This is without exception. Whateve
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(tidytext)
-library(DT)
-library(scales)
 library(wordcloud2)
-library(gridExtra)
 library(ngram)
 
+# processed data
 hm_data <- read_csv("c:/Users/cjsly/Documents/GitHub/Fall2018-Proj1-JiansongChen2018/output/processed_moments.csv")
+# demographic data
 urlfile<-'https://raw.githubusercontent.com/rit-public/HappyDB/master/happydb/data/demographic.csv'
 demo_data <- read_csv(urlfile)
 
+# Take useful variables
 hm_data <- hm_data %>%
   inner_join(demo_data, by = "wid") %>%
   select(wid,
@@ -67,6 +67,7 @@ First of all, we will have a glance over the total survey populations. From pei 
 
 \newline
 ```{r echo=FALSE, message=FALSE, warning=FALSE} 
+# create pie chart in proportion
 count_sm <- count(hm_data, hm_data$gender == "m" & hm_data$marital=="single")[2,2]
 count_mm <- count(hm_data, hm_data$gender == "m" & hm_data$marital=="married")[2,2]
 count_sf <- count(hm_data, hm_data$gender == "f" & hm_data$marital=="single")[2,2]
@@ -136,7 +137,7 @@ Let's take a look at the overview of the most popular words in all happy moments
 
 \newline
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-# Wordcloud for male and female
+# Wordcloud for all
 wordcloud2(head(word_count,100), size = 0.8, rotateRatio = 0, gridSize = 1)
 ```
 \newline
@@ -162,6 +163,7 @@ From the more detailed word frequency table, we would find out that beside of fa
 
 \newline
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Plot graph for word count of male
 par(mfrow=c(1,2))
 word_count_male %>%
     mutate(word = reorder(word, n)) %>%
@@ -172,6 +174,7 @@ word_count_male %>%
     ylab("Word Frequency for male")+
     coord_flip()
 
+# Plot graph for word count of female
 word_count_female %>%
     mutate(word = reorder(word, n)) %>%
     head(20) %>%
@@ -187,6 +190,7 @@ Furthermore, as we go deeper to explore the key word that people matters for hap
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 par(mfrow=c(2,2))
+# Plot graph for word count of single male
 word_count_male_single %>%
     mutate(word = reorder(word, n)) %>%
     head(20) %>%
@@ -195,6 +199,7 @@ word_count_male_single %>%
     xlab(NULL) +
     ylab("Word Frequency for single male")+
     coord_flip()
+# Plot graph for word count of single female
 word_count_female_single %>%
     mutate(word = reorder(word, n)) %>%
     head(20) %>%
@@ -203,6 +208,7 @@ word_count_female_single %>%
     xlab(NULL) +
     ylab("Word Frequency for single female")+
     coord_flip()
+# Plot graph for word count of married male
 word_count_male_married %>%
     mutate(word = reorder(word, n)) %>%
     head(20) %>%
@@ -211,6 +217,7 @@ word_count_male_married %>%
     xlab(NULL) +
     ylab("Word Frequency for married male")+
     coord_flip()
+# Plot graph for word count of married female
 word_count_female_married %>%
     mutate(word = reorder(word, n)) %>%
     head(20) %>%
@@ -256,6 +263,7 @@ catf <- rbind(cat1,cat2,cat3,cat4)
 colnames(catf) <- cat
 rownames(catf) <- c("single male", "married male", "single female", "married female")
 
+# Create heatmap
 library(d3heatmap)
 library(shiny)
 div(d3heatmap(catf, scale="none", colors= "Reds",
@@ -265,13 +273,83 @@ div(d3heatmap(catf, scale="none", colors= "Reds",
 \newline
 Note that the darker red-color indicator represents higher weights on that category. From the heatmap, we can see that single male and single female are more likely to receive happiness from achievement. Without children or even marriage, unmarried people would have more time and energy focusing on the job or work, which make them easier to achieve their target. But for married people, they are more relied on affection, which represent relationship between family and children.  
 \newline
- 
+
+Not only through gender perspectives, we can also research through the different age groups.
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+n_age <- length(hm_data$age)
+for (i in 1:n_age){
+  hm_data$age_group[i] <- as.integer(hm_data$age[i])
+}
+
+
+for (i in 1:7){
+  category[i] <- count(filter(hm_data, hm_data$age_group<20 & hm_data$predicted_category == cat[i]))
+}
+cat1 <- do.call(cbind, category)
+cat1 <- round(cat1/sum(cat1)*100)
+for (i in 1:7){
+  category[i] <- count(filter(hm_data, hm_data$age_group>=20 & hm_data$age_group<30 & hm_data$predicted_category == cat[i]))
+}
+cat2 <- do.call(cbind, category)
+cat2 <- round(cat2/sum(cat2)*100)
+for (i in 1:7){
+  category[i] <-  count(filter(hm_data, hm_data$age_group>=30 & hm_data$age_group<40 & hm_data$predicted_category == cat[i]))
+}
+cat3 <- do.call(cbind, category)
+cat3 <- round(cat3/sum(cat3)*100)
+
+for (i in 1:7){
+  category[i] <- count(filter(hm_data, hm_data$age_group>=40 & hm_data$age_group<50 & hm_data$predicted_category == cat[i]))
+}
+cat4 <- do.call(cbind, category)
+cat4 <- round(cat4/sum(cat4)*100)
+for (i in 1:7){
+  category[i] <- count(filter(hm_data, hm_data$age_group>=50 & hm_data$age_group<60 & hm_data$predicted_category == cat[i]))
+}
+cat5 <- do.call(cbind, category)
+cat5 <- round(cat5/sum(cat5)*100)
+for (i in 1:7){
+  category[i] <- count(filter(hm_data, hm_data$age_group>=60 & hm_data$age_group<70 & hm_data$predicted_category == cat[i]))
+}
+cat6 <- do.call(cbind, category)
+cat6 <- round(cat6/sum(cat6)*100)
+for (i in 1:7){
+  category[i] <- count(filter(hm_data, hm_data$age_group>=70 & hm_data$age_group<80 & hm_data$predicted_category == cat[i]))
+}
+cat7 <- do.call(cbind, category)
+cat7 <- round(cat7/sum(cat7)*100)
+for (i in 1:7){
+  category[i] <- count(filter(hm_data, hm_data$age_group>=80 & hm_data$age_group<90 & hm_data$predicted_category == cat[i]))
+}
+cat8 <- do.call(cbind, category)
+cat8 <- round(cat8/sum(cat8)*100)
+for (i in 1:7){
+  category[i] <- count(filter(hm_data, hm_data$age_group>=90 & hm_data$age_group<100 & hm_data$predicted_category == cat[i]))
+}
+cat9 <- do.call(cbind, category)
+cat9 <- round(cat7/sum(cat7)*100)
+catf <- rbind(cat1,cat2,cat3,cat4,cat5,cat6,cat7,cat8,cat9)
+colnames(catf) <- cat
+rownames(catf) <- c("<20", "20-30", "30-40", "40-50","50-60","60-70","70-80","80-90","90-100")
+
+# Create heatmap
+library(d3heatmap)
+library(shiny)
+div(d3heatmap(catf, scale="none", colors= "Greens",
+          xaxis_font_size = 8,Rowv = FALSE,Colv=FALSE,show_grid=TRUE),
+    align='center')
+```
+\newline
+Note that the darker green-color indicator represents higher weights on that category. From the heatmap, we can see that most happiness is concentrated in the categories of achievement and affection. As age increases, people tends to more rely on affection. 
+\newline
+
+
 Last but not least, we need to check which gender group is happier. By using the sentiments analysis, we can analyze each happy moments from the aspects of the eight basic emotions (anger, fear, anticipation, trust, surprise, sadness, joy, and disgust) and two sentiments (negative and positive). But since it is happy moments, I would expect happy moments heavily relied on positive sentiments.
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-library(sentimentr)
 library(syuzhet)
-library(tibble)
 senti <- matrix(NA, ncol = 10, nrow = 4)
+# sentiment analysis
 emotions<-get_nrc_sentiment(filter(hm_data, hm_data$gender == "f" & hm_data$marital == "single" )$text)
 emotions2<-get_nrc_sentiment(filter(hm_data, hm_data$gender == "m" & hm_data$marital == "married" )$text)
 emotions3<-get_nrc_sentiment(filter(hm_data, hm_data$gender == "f" & hm_data$marital == "single" )$text)
